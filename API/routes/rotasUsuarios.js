@@ -1,7 +1,11 @@
 import { BD } from "../db.js";
 import bcrypt from "bcrypt";
+import jwt from 'jsonwebtoken'
 
+ const SECRET_KEY = "chave_api_gfp"
 class rotasUsuarios {
+
+    // CRIAR USUARIO
     static async novoUsuario(req, res) {
         const { nome, email, senha, tipo_acesso } = req.body;
         const saltRounds = 10;
@@ -17,6 +21,8 @@ class rotasUsuarios {
             res.status(500).json({ message: "Erro ao criar usuário", error: error.message });
         }
     }
+
+    //LOGIN
     static async login(req, res) {
         const { email, senha } = req.body;
 
@@ -37,14 +43,14 @@ class rotasUsuarios {
                 return res.status(401).json('Email ou senha inválidos')
             }
             // //Gerar um novo token para o usuario
-            // const token = jwt.sign(
+            const token = jwt.sign(
             // //payload
-            // {id: usuarios.id, nome: usuarios.nome, email: usuarios.email},
+            {id: usuarios.id, nome: usuarios.nome, email: usuarios.email},
             // //signature
-            // SECRET_KEY,
-            // {expiresIn: '1h'}
-            //  )
-            return res.status(200).json({ message: 'Login realizado com sucesso', usuarios });
+            SECRET_KEY,
+            {expiresIn: '1h'}
+             )
+            return res.status(200).json({ message: 'Login realizado com sucesso', usuarios, token });
             //  return res.status(200).json({message: 'Login realizado com sucesso', usuario});
         }
         catch (error) {
@@ -53,6 +59,8 @@ class rotasUsuarios {
 
         }
     }
+
+    // LISTAR
     static async listarUsuarios(req, res) {
         try {
             const resultado = await BD.query(`SELECT * From usuarios`);
@@ -61,6 +69,8 @@ class rotasUsuarios {
             res.status(500).json({ mensagem: 'Erro ao buscar usuários', erro: error.message });
         }
     }
+
+    // LISTAR POR ID
     static async listarUsuariosPorId (req, res) {
         const { id } = req.params
         try{
@@ -71,7 +81,7 @@ class rotasUsuarios {
         }
     }
 
-    // Função atualizar
+    // ATUALIZAR TODOS
     static async atualizarTodos(req, res) {
         const { id_usuario } = req.params
         const { nome, email, senha, tipo_acesso } = req.body;
@@ -86,6 +96,7 @@ class rotasUsuarios {
         }
     }
 
+    // ATUALIZAR
     static async atualizar(req, res) {
         const { nome, email, senha, tipo_acesso } = req.body;
 
@@ -128,6 +139,8 @@ class rotasUsuarios {
             res.status(500).json({ message: "Erro ao atualizar o usario", error: error.message })
         }
     }
+
+    //DELETAR
     static async deletar(req, res) {
         const { id_usuario } = req.params
 
@@ -140,6 +153,19 @@ class rotasUsuarios {
             res.status(500).json({ message: "Erro ao consultar usuarios", error: error.message })
         }
     }
+}
+
+export function autenticarToken(req, res, next) {
+    const token = req.headers['authorization'];
+
+    if (!token) return res.status(403).json({message: 'Token não fornecido'})
+
+    jwt.verify(token.split(" ")[1], SECRET_KEY, (err, usuario) => {
+        if(err) return res.status(403).json({message: 'Token inválido'})
+
+        req.usuario = usuario;
+        next();
+    })
 }
 
 export default rotasUsuarios;
